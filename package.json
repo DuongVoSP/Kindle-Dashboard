@@ -1,0 +1,15 @@
+{
+  "name": "kindle-dashboard",
+  "version": "0.1.0",
+  "description": "Lightweight Kindle-compatible dashboard with simple JSON APIs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
+

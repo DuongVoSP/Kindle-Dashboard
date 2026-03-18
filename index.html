@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kindle Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Meta refresh for simple periodic reload on constrained browsers -->
+  <meta http-equiv="refresh" content="60">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="widget widget-clock" aria-label="Clock and date">
+      <header class="widget-title">TIME &amp; DATE</header>
+      <div class="clock-time" id="clock-time">--:--</div>
+      <div class="clock-date" id="clock-date">----- --, ----</div>
+    </section>
+
+    <section class="widget widget-weather" aria-label="Weather">
+      <header class="widget-title">WEATHER</header>
+      <div class="widget-body">
+        <div id="weather-temp" class="weather-line">Temp: --</div>
+        <div id="weather-condition" class="weather-line">Condition: --</div>
+        <div id="weather-location" class="weather-line">Location: --</div>
+        <div id="weather-error" class="widget-error" hidden>Weather: unavailable</div>
+      </div>
+    </section>
+
+    <section class="widget widget-stocks" aria-label="Stocks">
+      <header class="widget-title">STOCKS</header>
+      <div class="widget-body" id="stocks-list">
+        <div class="widget-placeholder">Loading…</div>
+      </div>
+      <div id="stocks-error" class="widget-error" hidden>Stocks: retry later</div>
+    </section>
+
+    <section class="widget widget-calendar" aria-label="Today's events">
+      <header class="widget-title">TODAY'S EVENTS</header>
+      <div class="widget-body" id="calendar-list">
+        <div class="widget-placeholder">Loading…</div>
+      </div>
+      <div id="calendar-error" class="widget-error" hidden>Calendar: no events</div>
+    </section>
+
+    <section class="widget widget-system" aria-label="System status">
+      <header class="widget-title">SYSTEM STATUS</header>
+      <div class="widget-body" id="system-status">
+        <div class="widget-placeholder">Loading…</div>
+      </div>
+      <div id="system-error" class="widget-error" hidden>System: unavailable</div>
+    </section>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>
+
