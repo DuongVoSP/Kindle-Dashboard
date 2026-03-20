@@ -23,6 +23,35 @@ body {
   padding: 20px;
 }
 
+.row {
+  display: block;
+}
+
+.row-top {
+  margin-top: 0;
+}
+
+.row-top .widget {
+  margin-top: 0;
+}
+
+/* If flexbox is supported, put clock + weather side-by-side */
+@supports (display: flex) {
+  .row-top {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .row-top .widget {
+    flex: 1 1 0;
+  }
+
+  .widget-clock .clock-time {
+    font-size: 34px;
+  }
+}
+
 .widget {
   border-top: 1px solid #000;
   padding-top: 10px;
@@ -40,6 +69,31 @@ body {
   font-size: 14px;
   line-height: 1.6;
 }
+
+.widget-weather {
+  position: relative;
+}
+
+.weather-body {
+  display: flex;
+  align-items: center;
+}
+
+.weather-icon {
+  width: 64px;
+  height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+/* No extra pseudo-elements – we use a simple text glyph (sun/cloud/rain/snow/⚡) inside the box. */
 
 .widget-placeholder {
   color: #555;
@@ -82,9 +136,39 @@ body {
   display: inline-block;
 }
 
+.row-market {
+  margin-top: 20px;
+}
+
+@supports (display: flex) {
+  .row-market {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .row-market .widget {
+    flex: 1 1 0;
+  }
+}
+
+.market-line {
+  margin-bottom: 4px;
+}
+
+.market-label {
+  display: inline-block;
+  width: 110px;
+}
+
+.market-value {
+  display: inline-block;
+}
+
 .calendar-time {
   display: inline-block;
-  width: 70px;
+  width: 100px;
+  white-space: nowrap;
 }
 
 .calendar-title {

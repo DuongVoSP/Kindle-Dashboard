@@ -4,20 +4,27 @@ Lightweight web dashboard designed for the Experimental Browser of an e-ink devi
 
 ## Running locally
 
-1. Install Node.js (v18+ recommended).
-2. From the project directory:
+This project is **static-only** (no backend). Run any simple static file server.
+
+### Option A: Python
+
+From the project directory:
 
 ```bash
-npm install
-npm start
+python -m http.server 8000
 ```
 
-3. Open `http://localhost:3000` in a browser. For Kindle, use the Experimental Browser pointing to the same URL on your network.
+Open `http://localhost:8000` in a browser. For Kindle, open `http://<your-pc-ip>:8000`.
 
-The page auto-refreshes every 60 seconds using an HTML meta refresh tag and loads data from simple JSON endpoints:
+## Public APIs used
 
-- `/api/weather`
-- `/api/stocks`
-- `/api/calendar`
-- `/api/system`
+- **Weather**: Open-Meteo (geocoding + current weather)
+- **Stocks**: Stooq CSV endpoint (may fail if CORS blocked)
+- **Events**: Nager.Date Public Holidays (used as “today’s events”)
+
+## URL parameters
+
+- `?city=Ho%20Chi%20Minh%20City` (weather location)
+- `?stocks=AAPL.US,NVDA.US,TSLA.US` (stock symbols)
+- `?country=VN` (holiday country code for events)
 
