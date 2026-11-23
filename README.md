@@ -2,29 +2,54 @@
 
 Lightweight web dashboard designed for the Experimental Browser of an e-ink device such as the Amazon Kindle Paperwhite. It follows the design described in `BUILD_PLAN.md` with simple widgets for time, weather, stocks, calendar, and system status.
 
-## Running locally
+## Running
 
-This project is **static-only** (no backend). Run any simple static file server.
+A plain Node server (no dependencies) on port **7972**. The Mac fetches all data and sends finished
+HTML, because the Kindle browser (WebKit 531, 758x1024) has no `fetch`, `Promise` or flexbox.
 
-### Option A: Python
+- `sources.js`: fetches and caches the data. City and stock symbols are constants at the top.
+- `page.js`: renders the page with HTML4 tables and CSS2 only, no scripts.
+- `server.js`: HTTP server, only serves `/`.
 
-From the project directory:
+Run it automatically at login (macOS launchd, restarted if it crashes):
 
 ```bash
-python -m http.server 8000
+./service.sh install     # also: uninstall | restart | status
 ```
 
-Open `http://localhost:8000` in a browser. For Kindle, open `http://<your-pc-ip>:8000`.
+Or run it once by hand: `npm start`.
 
-## Public APIs used
+Open `http://<mac-name>.local:7972` or `http://<mac-ip>:7972` from any device on the local network.
+Some Kindle browsers do not resolve `.local` names; use the IP there.
 
-- **Weather**: Open-Meteo (geocoding + current weather)
-- **Stocks**: Stooq CSV endpoint (may fail if CORS blocked)
-- **Events**: Nager.Date Public Holidays (used as “today’s events”)
+After editing any `.js` file, run `./service.sh restart`.
+Log: `~/Library/Logs/kindle-dashboard.log`.
 
-## URL parameters
+## Orientation
 
-- `?city=Ho%20Chi%20Minh%20City` (weather location)
-- `?stocks=AAPL.US,NVDA.US,TSLA.US` (stock symbols)
-- `?country=VN` (holiday country code for events)
+The Rotate button in the footer switches between `/` (portrait) and `/?view=landscape`. Landscape is drawn
+sideways with CSS, so turn the Kindle a quarter turn to the left (right edge up). Bookmark either address.
 
+## Holidays
+
+`holidays.js` downloads the calendar once a year, from 1 November (after next year's schedule is announced),
+into `data/holidays.json`, and reads that file the rest of the time. Fixed-date holidays set by law are in the
+`FIXED` table and are added even if the calendar lacks them. To correct a date, edit `data/holidays.json` and
+run `./service.sh restart`; to download again, delete the file first.
+
+## Claude usage
+
+The server runs `claude -p /usage` (a local command, no tokens spent) at most every 5 minutes, using the
+Claude Code login on this Mac, and shows only the session and weekly percentages and reset times.
+Anyone on the local network can see them.
+
+## Data sources
+
+- **Weather**: Open-Meteo
+- **Stocks**: Stockbiz
+- **Gold**: vang.today
+- **USD**: moneyconvert.net
+- **Holidays**: Google's public Vietnam holiday calendar, see below
+
+Values that could not be refreshed stay on screen for a while and are listed under "Old data" in the
+footer with the time they were fetched. After that they show `--`.

@@ -1,0 +1,122 @@
+{
+  "season": 2026,
+  "downloaded": "2026-11-23T10:03:10.016Z",
+  "source": "https://calendar.google.com/calendar/ical/vi.vietnamese%23holiday%40group.v.calendar.google.com/public/basic.ics",
+  "holidays": [
+    {
+      "start": "2026-01-01",
+      "end": "2026-01-02",
+      "name": "New Year"
+    },
+    {
+      "start": "2026-02-16",
+      "end": "2026-02-21",
+      "name": "Lunar New Year"
+    },
+    {
+      "start": "2026-04-26",
+      "end": "2026-04-27",
+      "name": "Hung Kings Day"
+    },
+    {
+      "start": "2026-04-30",
+      "end": "2026-04-30",
+      "name": "Reunification Day"
+    },
+    {
+      "start": "2026-05-01",
+      "end": "2026-05-01",
+      "name": "Labour Day"
+    },
+    {
+      "start": "2026-08-31",
+      "end": "2026-09-02",
+      "name": "National Day"
+    },
+    {
+      "start": "2026-11-24",
+      "end": "2026-11-24",
+      "name": "Culture Day"
+    },
+    {
+      "start": "2027-01-01",
+      "end": "2027-01-01",
+      "name": "New Year"
+    },
+    {
+      "start": "2027-02-04",
+      "end": "2027-02-10",
+      "name": "Lunar New Year"
+    },
+    {
+      "start": "2027-04-16",
+      "end": "2027-04-16",
+      "name": "Hung Kings Day"
+    },
+    {
+      "start": "2027-04-30",
+      "end": "2027-04-30",
+      "name": "Reunification Day"
+    },
+    {
+      "start": "2027-05-01",
+      "end": "2027-05-03",
+      "name": "Labour Day"
+    },
+    {
+      "start": "2027-07-27",
+      "end": "2027-07-27",
+      "name": "Martyrs' Day"
+    },
+    {
+      "start": "2027-09-02",
+      "end": "2027-09-03",
+      "name": "National Day"
+    },
+    {
+      "start": "2027-11-24",
+      "end": "2027-11-24",
+      "name": "Culture Day"
+    },
+    {
+      "start": "2028-01-01",
+      "end": "2028-01-03",
+      "name": "New Year"
+    },
+    {
+      "start": "2028-01-25",
+      "end": "2028-01-30",
+      "name": "Lunar New Year"
+    },
+    {
+      "start": "2028-04-04",
+      "end": "2028-04-04",
+      "name": "Hung Kings Day"
+    },
+    {
+      "start": "2028-04-30",
+      "end": "2028-04-30",
+      "name": "Reunification Day"
+    },
+    {
+      "start": "2028-05-01",
+      "end": "2028-05-02",
+      "name": "Labour Day"
+    },
+    {
+      "start": "2028-07-27",
+      "end": "2028-07-27",
+      "name": "Martyrs' Day"
+    },
+    {
+      "start": "2028-09-02",
+      "end": "2028-09-04",
+      "name": "National Day"
+    },
+    {
+      "start": "2028-11-24",
+      "end": "2028-11-24",
+      "name": "Culture Day"
+    }
+  ]
+}
