@@ -24,10 +24,12 @@ function handle(req, res) {
   var landscape = /(^|&)view=landscape(&|$)/.test(parts[1] || "");
   if (path !== "/" && path !== "/index.html") return send(res, 404, "text/plain", "Not found");
 
+  // Only reads data/latest.json; the collector does the fetching.
   sources
-    .getAll()
-    .then(function (data) {
-      send(res, 200, "text/html; charset=utf-8", page.render(data, sources.STOCKS, new Date(), landscape));
+    .readLatest()
+    .then(function (latest) {
+      var html = page.render(latest.data, sources.STOCKS, new Date(), landscape, latest.updated);
+      send(res, 200, "text/html; charset=utf-8", html);
     })
     .catch(function (e) {
       console.error(new Date().toISOString() + " render failed: " + (e && e.stack));
@@ -59,5 +61,5 @@ server.on("clientError", function (err, socket) {
 });
 server.listen(PORT, HOST, function () {
   console.log(new Date().toISOString() + " listening on " + HOST + ":" + PORT);
-  sources.getAll(); // warm the cache so the first page load is quick
+  sources.start(); // fetch now, then every minute, into data/latest.json
 });

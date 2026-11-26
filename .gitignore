@@ -6,3 +6,6 @@ yarn-error.log*
 .env.*
 .DS_Store
 
+data/latest.log
+data/latest.log.tmp
+data/logs/

@@ -1,69 +1,19 @@
-// Fetches and caches everything the dashboard shows. Runs on the Mac, because
-// the Kindle browser (WebKit 531) has no fetch/Promise and outdated TLS.
+// Fetches everything the dashboard shows on a schedule and saves it to files.
+// Runs on the Mac, because the Kindle browser (WebKit 531) has no fetch/Promise
+// and outdated TLS.
 "use strict";
 
+var fs = require("fs");
 var os = require("os");
 var path = require("path");
 var execFile = require("child_process").execFile;
 var holidays = require("./holidays");
 
 var CITY = "Ho Chi Minh City";
-var STOCKS = ["HPG", "HSG", "BSR"];
+var STOCKS = ["POW", "HSG", "BSR"];
 var CLAUDE_BIN = process.env.CLAUDE_BIN || path.join(os.homedir(), ".local/bin/claude");
 
 var MINUTE = 60 * 1000;
-var RETRY_MS = MINUTE; // wait after a failure
-var WAIT_MS = 3000; // longest a page load waits for missing or old data
-
-// ---- cache ---------------------------------------------------------------
-
-// Keeps the last good value, refreshing in the background once `ttl` passes.
-function cached(name, ttl, keep, load) {
-  var value = null;
-  var at = 0;
-  var nextTry = 0;
-  var pending = null;
-
-  function refresh() {
-    if (pending) return pending;
-    pending = load()
-      .then(function (v) {
-        value = v;
-        at = Date.now();
-        nextTry = at + ttl;
-      })
-      .catch(function (e) {
-        console.error(new Date().toISOString() + " " + name + " failed: " + (e && e.message));
-        nextTry = Date.now() + RETRY_MS;
-      })
-      .then(function () {
-        pending = null;
-      });
-    return pending;
-  }
-
-  function isOld() {
-    return Date.now() - at > 2 * ttl;
-  }
-
-  return function get() {
-    var refreshing = Date.now() >= nextTry ? refresh() : pending;
-    var ready = Promise.resolve();
-    if (refreshing && isOld()) {
-      var timer;
-      var timeout = new Promise(function (r) {
-        timer = setTimeout(r, WAIT_MS);
-      });
-      ready = Promise.race([refreshing, timeout]).then(function () {
-        clearTimeout(timer);
-      });
-    }
-    return ready.then(function () {
-      var usable = at && Date.now() - at <= keep;
-      return { value: usable ? value : null, at: usable ? at : null, old: !!usable && isOld() };
-    });
-  };
-}
 
 function get(url) {
   return fetch(url, { signal: AbortSignal.timeout(15000) }).then(function (res) {
@@ -210,35 +160,190 @@ function loadClaude() {
   });
 }
 
-// ---- public ------------------------------------------------------------------------
+
+// ---- collector ---------------------------------------------------------------------
+// Every minute the server requests every source (holidays excepted, see below), then:
+// - overwrites data/latest.log with the last successful value of each source
+//   (never an error). Page loads only read this file.
+// - appends one line to data/logs/YYYY-MM-DD.log with this minute's results,
+//   errors included. A new file starts each day.
+
+var DATA_DIR = path.join(__dirname, "data");
+var LATEST_FILE = path.join(DATA_DIR, "latest.log");
+var LOG_DIR = path.join(DATA_DIR, "logs");
+var LOG_DAYS = 30; // daily log files kept
+var CYCLE_SECOND = 20; // each cycle starts at this second, so it ends before the page reloads at :01
 
 var DAY = 24 * 60 * MINUTE;
-var sources = {
-  Weather: cached("Weather", 15 * MINUTE, 3 * 60 * MINUTE, loadWeather),
-  Gold: cached("Gold", 10 * MINUTE, DAY, loadGold),
-  USD: cached("USD", 60 * MINUTE, DAY, loadUsd),
-  Holidays: cached("Holidays", 12 * 60 * MINUTE, 7 * DAY, holidays.load),
-  Claude: cached("Claude", 5 * MINUTE, 60 * MINUTE, loadClaude)
+var OLD_MS = 3 * MINUTE; // a value this old (two missed minutes) is listed as old data
+
+// keep: how long a value is still shown after its last success.
+var SOURCES = {
+  Weather: { keep: 3 * 60 * MINUTE, load: loadWeather },
+  Gold: { keep: DAY, load: loadGold },
+  USD: { keep: DAY, load: loadUsd },
+  Claude: { keep: 60 * MINUTE, load: loadClaude }
 };
 STOCKS.forEach(function (code) {
-  sources[code] = cached(code, 5 * MINUTE, DAY, function () {
-    return loadStock(code);
-  });
+  SOURCES[code] = {
+    keep: DAY,
+    load: function () {
+      return loadStock(code);
+    }
+  };
 });
 
-function getAll() {
-  var names = Object.keys(sources);
-  return Promise.all(
-    names.map(function (n) {
-      return sources[n]();
-    })
-  ).then(function (results) {
-    var all = {};
-    names.forEach(function (n, i) {
-      all[n] = results[i];
-    });
-    return all;
+function localDate(d) {
+  function two(n) {
+    return (n < 10 ? "0" : "") + n;
+  }
+  return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate());
+}
+
+function readLatestSync() {
+  try {
+    return JSON.parse(fs.readFileSync(LATEST_FILE, "utf8"));
+  } catch (e) {
+    if (e.code !== "ENOENT") console.error(new Date().toISOString() + " " + LATEST_FILE + ": " + e.message);
+    return null;
+  }
+}
+
+// Last success of each source: name -> { value, at (ISO) }. Seeded from the
+// file so a restart keeps the last values.
+var latest = {};
+(function seed() {
+  var saved = readLatestSync();
+  Object.keys(SOURCES).forEach(function (n) {
+    var s = saved && saved.sources && saved.sources[n];
+    if (s && s.at) latest[n] = { value: s.value, at: s.at };
+  });
+})();
+
+function writeAtomic(file, text) {
+  fs.writeFileSync(file + ".tmp", text);
+  fs.renameSync(file + ".tmp", file);
+}
+
+var prunedOn = "";
+function pruneLogs(today) {
+  if (prunedOn === today) return;
+  prunedOn = today;
+  var cutoff = localDate(new Date(Date.now() - LOG_DAYS * DAY));
+  fs.readdirSync(LOG_DIR).forEach(function (f) {
+    var m = f.match(/^(\d{4}-\d{2}-\d{2})\.log$/);
+    if (m && m[1] < cutoff) fs.unlinkSync(path.join(LOG_DIR, f));
   });
 }
 
-module.exports = { getAll: getAll, STOCKS: STOCKS, parseUsage: parseUsage, parseStock: parseStock };
+var running = false;
+
+function collect() {
+  if (running) return Promise.resolve();
+  running = true;
+  var names = Object.keys(SOURCES);
+  // This minute's results, name -> { ok, value | error, at }
+  var results = {};
+  return Promise.all(
+    names.map(function (n) {
+      return Promise.resolve()
+        .then(SOURCES[n].load)
+        .then(function (v) {
+          var at = new Date().toISOString();
+          latest[n] = { value: v, at: at };
+          results[n] = { ok: true, value: v, at: at };
+        })
+        .catch(function (e) {
+          var msg = String((e && e.message) || e).slice(0, 200);
+          results[n] = { ok: false, error: msg, at: new Date().toISOString() };
+          console.error(results[n].at + " " + n + " failed: " + msg);
+        });
+    })
+  )
+    .then(function () {
+      var now = new Date();
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+
+      var snap = { updated: now.toISOString(), sources: {} };
+      names.forEach(function (n) {
+        if (latest[n]) snap.sources[n] = latest[n];
+      });
+      writeAtomic(LATEST_FILE, JSON.stringify(snap, null, 2) + "\n");
+
+      var line = { time: now.toISOString(), results: {} };
+      names.forEach(function (n) {
+        line.results[n] = results[n];
+      });
+      var today = localDate(now);
+      fs.appendFileSync(path.join(LOG_DIR, today + ".log"), JSON.stringify(line) + "\n");
+      pruneLogs(today);
+    })
+    .catch(function (e) {
+      console.error(new Date().toISOString() + " collect failed: " + (e && e.stack));
+    })
+    .then(function () {
+      running = false;
+    });
+}
+
+// Holidays are not part of the minute cycle: data/holidays.json is downloaded
+// once a year (from 1 November) and only checked for that once a day.
+function checkHolidays() {
+  holidays.load().catch(function (e) {
+    console.error(new Date().toISOString() + " holidays failed: " + (e && e.message));
+  });
+}
+
+function start() {
+  checkHolidays();
+  setInterval(checkHolidays, DAY);
+  collect();
+  (function schedule() {
+    var now = new Date();
+    var wait = ((CYCLE_SECOND - now.getSeconds() + 60) % 60 || 60) * 1000 - now.getMilliseconds();
+    setTimeout(function () {
+      collect();
+      schedule();
+    }, wait);
+  })();
+}
+
+// ---- reader --------------------------------------------------------------------------
+
+// What the page shows: name -> { value, at, old }, read only from latest.log,
+// plus Holidays from the yearly data/holidays.json.
+// A value past its `keep` time becomes null; one older than OLD_MS is marked old.
+function readLatest() {
+  return fs.promises
+    .readFile(LATEST_FILE, "utf8")
+    .then(JSON.parse)
+    .catch(function (e) {
+      if (e.code !== "ENOENT") console.error(new Date().toISOString() + " " + LATEST_FILE + ": " + e.message);
+      return null;
+    })
+    .then(function (saved) {
+      var now = Date.now();
+      var data = {};
+      Object.keys(SOURCES).forEach(function (n) {
+        var s = saved && saved.sources && saved.sources[n];
+        var at = s && s.at ? Date.parse(s.at) : 0;
+        var usable = at && now - at <= SOURCES[n].keep;
+        data[n] = {
+          value: usable ? s.value : null,
+          at: usable ? at : null,
+          old: !!usable && now - at > OLD_MS
+        };
+      });
+      data.Holidays = { value: holidays.read(), at: null, old: false };
+      return { data: data, updated: saved && saved.updated ? new Date(saved.updated) : null };
+    });
+}
+
+module.exports = {
+  start: start,
+  collect: collect,
+  readLatest: readLatest,
+  STOCKS: STOCKS,
+  parseUsage: parseUsage,
+  parseStock: parseStock
+};

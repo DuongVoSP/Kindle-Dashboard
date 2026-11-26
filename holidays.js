@@ -174,4 +174,10 @@ function load() {
     });
 }
 
-module.exports = { load: load, parseYear: parseYear, group: group, season: season };
+// The saved list only, never downloads (used on each page load).
+function read() {
+  var saved = readFile();
+  return saved ? saved.holidays : [];
+}
+
+module.exports = { load: load, read: read, parseYear: parseYear, group: group, season: season };

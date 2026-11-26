@@ -133,7 +133,7 @@ function weatherTile(w) {
   );
 }
 
-function footer(data, now, landscape) {
+function footer(data, updated, landscape) {
   var old = Object.keys(data)
     .filter(function (n) {
       return data[n].old;
@@ -142,13 +142,14 @@ function footer(data, now, landscape) {
       return n + " " + hhmm(new Date(data[n].at));
     });
   return (
-    '<table class="foot"><tr><td width="75%">Updated ' + hhmm(now) +
+    '<table class="foot"><tr><td width="75%">Updated ' + (updated ? hhmm(updated) : "--") +
     (old.length ? " | Old data: " + esc(old.join(", ")) : "") +
     '</td><td class="r" width="25%"><a href="' + (landscape ? "/" : "/?view=landscape") + '">Rotate</a></td></tr></table>\n'
   );
 }
 
-function render(data, stocks, now, landscape) {
+// `updated`: when the server last saved the data (shown in the footer).
+function render(data, stocks, now, landscape, updated) {
   var gold = data.Gold.value;
   var usd = data.USD.value;
   var claude = data.Claude.value || {};
@@ -188,7 +189,7 @@ function render(data, stocks, now, landscape) {
       evenWidths(3)
     ) +
     (landscape ? "" : row([events], [100])) +
-    footer(data, now, landscape) +
+    footer(data, updated, landscape) +
     "</div></div></body></html>\n"
   );
 }
